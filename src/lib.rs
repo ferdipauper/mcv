@@ -1,24 +1,23 @@
-//! Minecraft Core Visuals (MCV) 0.3: ALAM, untuk Weft 26.11.3.
+//! Minecraft Core Visuals (MCV) 0.4: ALAM, untuk Weft 26.11.3.
 //! Nama blok dan nama file tekstur mengikuti Minecraft Java 1.21.5+.
 //!
-//! Yang dilakukan mod ini:
-//!  1. Mematikan penyebaran rumput acak bawaan base (GRASS_COVER = 0 di semua biome berumput).
-//!     Bunga, kaktus, dan tebu bawaan tetap jalan.
-//!  2. Menanam ulang SEMUA tumbuhan lewat satu dekorasi, dalam bercak alami (noise), bukan acak:
-//!       - rumput pendek  = blok `base:tall_grass` bawaan Weft (tampilannya memang rumput pendek)
-//!       - rumput tinggi  = `mcv:tall_grass_bottom` + `mcv:tall_grass_top` (2 blok)
-//!       - fern           = `mcv:fern`
-//!       - large fern     = `mcv:large_fern_bottom` + `mcv:large_fern_top` (2 blok)
-//!       - bush           = `mcv:bush`
-//!       - sweet berry bush = `mcv:sweet_berry_bush` (age 0-3, tekstur sweet_berry_bush_stage0..3)
-//!       - gurun: `mcv:short_dry_grass`, `mcv:tall_dry_grass`, `mcv:dead_bush`
+//! Isi:
+//!  1. Mematikan penyebaran rumput acak bawaan base (GRASS_COVER = 0). Bunga, kaktus, tebu bawaan tetap jalan.
+//!  2. Menanam ulang tumbuhan lewat SATU dekorasi, dalam bercak noise, dengan profil per biome
+//!     yang meniru Minecraft 1.21.5:
+//!       plains        : rumput pendek lebat, bercak rumput tinggi, bercak bunga, bush kecil
+//!       forest        : rumput sedang, bush, sedikit fern, bunga jarang
+//!       birch forest  : rumput lebih lebat, bush, sedikit rumput tinggi
+//!       taiga         : rumput + fern bercampur, large fern, rumput tinggi, sweet berry bush (jarang)
+//!       mountains     : rumput tipis, fern, bush
+//!       desert        : short_dry_grass, tall_dry_grass, dead_bush
+//!       snowy/ocean   : tidak ada
+//!  3. Semua blok punya item di creative inventory (tab Natural).
 //!
-//! Catatan: Weft 26.11.3 belum punya state `half` seperti Minecraft, jadi tanaman 2 blok
-//! (tall_grass, large_fern) berupa dua blok `_bottom` dan `_top`.
-//!
-//! Cara mengatur: ubah angka di `profile()` (kepadatan per biome) dan `PATCH` (ukuran bercak).
-//! Cara menambah jenis tumbuhan: salin satu blok di `init`, tambahkan di `plant_column`.
-//! Tekstur: ganti PNG di `assets/textures/block/` (sementara semuanya salinan `tallgrass`).
+//! Mengatur: ubah angka di `profile()` (kepadatan) dan `PATCH_*` (ukuran bercak).
+//! Menambah jenis tumbuhan: salin satu blok di `init`, lalu tambahkan di `choose` / `plant_world`.
+//! Tekstur: ganti PNG di `assets/textures/block/` (lihat TEXTURES.md).
+//! Catatan: Weft 26.11.3 belum punya state `half`, jadi tanaman 2 blok = dua blok `_bottom` dan `_top`.
 
 use weft_sdk::noise::*;
 use weft_sdk::*;
@@ -27,6 +26,7 @@ declare_mod!(deps: ["base"], init: init);
 
 // ---------------------------------------------------------------- blok ---------------------------
 
+pub static SHORT_GRASS: Block = Block::named("short_grass");
 pub static TALL_GRASS_BOTTOM: Block = Block::named("tall_grass_bottom");
 pub static TALL_GRASS_TOP: Block = Block::named("tall_grass_top");
 pub static FERN: Block = Block::named("fern");
@@ -37,57 +37,78 @@ pub static SWEET_BERRY_BUSH: Block = Block::named("sweet_berry_bush");
 pub static DEAD_BUSH: Block = Block::named("dead_bush");
 pub static SHORT_DRY_GRASS: Block = Block::named("short_dry_grass");
 pub static TALL_DRY_GRASS: Block = Block::named("tall_dry_grass");
-pub static SHORTGRASS1: Block = Block::named("shortgrass1");
 
-/// Rumput pendek milik base (blok satu petak yang dulu disebar acak).
-static SHORT_GRASS: Block = Block::named("base:tall_grass");
+// Milik base.
+static DANDELION: Block = Block::named("base:dandelion");
+static ROSE: Block = Block::named("base:rose");
+static NATURAL: CreativeTab = CreativeTab::named("base:natural");
 
-// Milik base. Tag di Weft bersifat global (tanpa "base:"), komponen pakai nama lengkap.
+static PLAINS: Biome = Biome::named("base:plains");
+static FOREST_BIOME: Biome = Biome::named("base:forest");
+static BIRCH_FOREST: Biome = Biome::named("base:birch_forest");
+static TAIGA: Biome = Biome::named("base:taiga");
+static MOUNTAINS: Biome = Biome::named("base:mountains");
+
+// Tag di Weft bersifat global (tanpa "base:"), komponen pakai nama lengkap.
 static PLANT_SOIL: Tag = Tag::named("plant_soil");
 static FROZEN: Tag = Tag::named("frozen");
 static DRY: Tag = Tag::named("dry");
 static FOREST: Tag = Tag::named("forest");
 static COLD: Tag = Tag::named("cold");
+static MOUNTAIN: Tag = Tag::named("mountain");
 /// Tag buatan mod ini: tanah untuk tumbuhan gurun (pasir + tanah biasa). Dibuat di `init`.
 static DRY_PLANT_SOIL: Tag = Tag::named("dry_plant_soil");
-static MOUNTAIN: Tag = Tag::named("mountain");
 static GRASS_COVER: Component<f32> = Component::named("base:grass");
 
 const SEA: i32 = 63;
 
+/// Rumput yang menjatuhkan biji gandum (seperti di Minecraft).
+fn seeds(r: &mut Registry, b: &'static Block, chance: f32) {
+    r.loot(b).pool(Pool::new().when(Cond::chance(chance)).item("base:wheat_seeds"));
+}
+
 fn init(r: &mut Registry) {
     // 1. Matikan rumput acak bawaan base.
-    for biome in ["base:plains", "base:forest", "base:birch_forest", "base:taiga", "base:mountains"] {
-        let handle: &'static Biome = Box::leak(Box::new(Biome::named(biome)));
-        r.edit(handle).set(&GRASS_COVER, 0.0);
-    }
+    r.edit(&PLAINS).set(&GRASS_COVER, 0.0);
+    r.edit(&FOREST_BIOME).set(&GRASS_COVER, 0.0);
+    r.edit(&BIRCH_FOREST).set(&GRASS_COVER, 0.0);
+    r.edit(&TAIGA).set(&GRASS_COVER, 0.0);
+    r.edit(&MOUNTAINS).set(&GRASS_COVER, 0.0);
 
     // Tanah tumbuhan gurun: pasir (cactus_soil) dan tanah berumput biasa.
     r.tag("dry_plant_soil", &["#cactus_soil", "#plant_soil"]);
 
-    // 1. Custom block shortgrass1 (model 3D kompleks, tanpa cahaya, muncul di inventory)
-    r.block(&SHORTGRASS1)
+    // 2. Blok. `plant()` = model silang tanpa tabrakan; `replaceable()` = bisa ditimpa blok.
+    //    Tanpa `.no_item()` berarti ada item di creative; `.tab(&NATURAL)` menaruhnya di tab Natural.
+    r.block(&SHORT_GRASS)
         .sound_group("base:block.grass")
-        .model("shortgrass1")
-        .hitbox([0.0, 0.0, 0.0], [0.0, 0.0, 0.0])
+        .texture("short_grass")
+        .plant()
         .replaceable()
-        .needs_below("#plant_soil");
+        .needs_below("#plant_soil")
+        .tint(&tints::GRASS)
+        .tab(&NATURAL);
+    seeds(r, &SHORT_GRASS, 0.125);
 
-    // 2. Blok tanaman lain (semua muncul di inventory karena .no_item() sudah dihapus)
+    // Rumput tinggi: item = bagian bawah; saat diletakkan, bagian atas ikut muncul.
     r.block(&TALL_GRASS_BOTTOM)
         .sound_group("base:block.grass")
         .texture("tall_grass_bottom")
         .plant()
         .replaceable()
         .needs_below("#plant_soil")
-        .tint(&tints::GRASS);
+        .tint(&tints::GRASS)
+        .on_place(|w, c| place_top(w, c, &TALL_GRASS_TOP))
+        .tab(&NATURAL);
     r.block(&TALL_GRASS_TOP)
         .sound_group("base:block.grass")
         .texture("tall_grass_top")
         .plant()
         .replaceable()
         .needs_below("mcv:tall_grass_bottom")
-        .tint(&tints::GRASS);
+        .tint(&tints::GRASS)
+        .no_item();
+    seeds(r, &TALL_GRASS_BOTTOM, 0.125);
 
     r.block(&FERN)
         .sound_group("base:block.grass")
@@ -95,30 +116,38 @@ fn init(r: &mut Registry) {
         .plant()
         .replaceable()
         .needs_below("#plant_soil")
-        .tint(&tints::GRASS);
+        .tint(&tints::GRASS)
+        .tab(&NATURAL);
+    seeds(r, &FERN, 0.125);
+
     r.block(&LARGE_FERN_BOTTOM)
         .sound_group("base:block.grass")
         .texture("large_fern_bottom")
         .plant()
         .replaceable()
         .needs_below("#plant_soil")
-        .tint(&tints::GRASS);
+        .tint(&tints::GRASS)
+        .on_place(|w, c| place_top(w, c, &LARGE_FERN_TOP))
+        .tab(&NATURAL);
     r.block(&LARGE_FERN_TOP)
         .sound_group("base:block.grass")
         .texture("large_fern_top")
         .plant()
         .replaceable()
         .needs_below("mcv:large_fern_bottom")
-        .tint(&tints::GRASS);
+        .tint(&tints::GRASS)
+        .no_item();
+    seeds(r, &LARGE_FERN_BOTTOM, 0.125);
 
-    // Bush: lebih besar dari rumput, berwarna daun (foliage).
+    // Bush (1.21.5): lebih besar dari rumput, warna daun (foliage). Menjatuhkan dirinya sendiri.
     r.block(&BUSH)
         .sound_group("base:block.grass")
         .texture("bush")
         .plant()
         .hitbox([2.0, 0.0, 2.0], [14.0, 13.0, 14.0])
         .needs_below("#plant_soil")
-        .tint(&tints::GRASS);
+        .tint(&tints::FOLIAGE)
+        .tab(&NATURAL);
 
     // Sweet berry bush: 4 tahap (age 0-3), tekstur sweet_berry_bush_stage0..3 seperti Minecraft.
     r.block(&SWEET_BERRY_BUSH)
@@ -127,22 +156,27 @@ fn init(r: &mut Registry) {
         .states(|p, s| s.texture(&format!("sweet_berry_bush_stage{}", p.get("age"))))
         .plant()
         .hitbox([1.0, 0.0, 1.0], [15.0, 14.0, 15.0])
-        .needs_below("#plant_soil");
+        .needs_below("#plant_soil")
+        .tab(&NATURAL);
 
-    // Tumbuhan gurun / kering (Minecraft 1.21.5): dead_bush, short_dry_grass, tall_dry_grass.
+    // Tumbuhan gurun / kering (1.21.5): dead_bush, short_dry_grass, tall_dry_grass.
     r.block(&DEAD_BUSH)
         .sound_group("base:block.grass")
         .texture("dead_bush")
         .plant()
         .replaceable()
-        .needs_below("#dry_plant_soil");
+        .needs_below("#dry_plant_soil")
+        .tab(&NATURAL);
+    r.loot(&DEAD_BUSH).pool(Pool::new().entry(Entry::item("base:stick").count(0, 2)));
     r.block(&SHORT_DRY_GRASS)
         .sound_group("base:block.grass")
         .texture("short_dry_grass")
         .plant()
         .replaceable()
         .needs_below("#dry_plant_soil")
-        .tint(&tints::GRASS);
+        .tint(&tints::GRASS)
+        .drops_nothing()
+        .tab(&NATURAL);
     r.block(&TALL_DRY_GRASS)
         .sound_group("base:block.grass")
         .texture("tall_dry_grass")
@@ -150,15 +184,20 @@ fn init(r: &mut Registry) {
         .replaceable()
         .hitbox([2.0, 0.0, 2.0], [14.0, 14.0, 14.0])
         .needs_below("#dry_plant_soil")
-        .tint(&tints::GRASS);
-
-    // Biji gandum dari rumput tinggi, seperti di base.
-    for b in [&TALL_GRASS_BOTTOM, &TALL_GRASS_TOP] {
-        r.loot(b).pool(Pool::new().when(Cond::chance(0.15)).item("base:wheat_seeds"));
-    }
+        .tint(&tints::GRASS)
+        .drops_nothing()
+        .tab(&NATURAL);
 
     // 3. Penanaman.
     r.decoration(plant_world);
+}
+
+/// Bagian atas tanaman 2 blok ikut diletakkan bila ruangnya kosong.
+fn place_top(w: &World, c: &BlockChange, top: &Block) {
+    let above = [c.pos.x, c.pos.y + 1, c.pos.z];
+    if w.block(above) == 0 {
+        w.set_block(above, top.id());
+    }
 }
 
 // ---------------------------------------------------------- pengaturan alam ---------------------
@@ -167,41 +206,63 @@ fn init(r: &mut Registry) {
 /// peluang MAKSIMAL per petak di bagian terpadat sebuah bercak (di luar bercak makin jarang).
 #[derive(Clone, Copy)]
 struct Profile {
-    grass: f64,      // rumput pendek
-    tall: f64,       // rumput tinggi (hanya di inti bercak rumput)
+    grass: f64,      // short_grass
+    tall: f64,       // tall_grass (inti bercak rumput)
     fern: f64,       // fern
-    large_fern: f64, // large fern (hanya di inti bercak fern)
-    bush: f64,       // bush (sangat jarang)
-    berry: f64,      // sweet berry bush (sangat jarang)
+    large_fern: f64, // large_fern (inti bercak fern)
+    bush: f64,       // bush (jarang, bercak kecil)
+    berry: f64,      // sweet_berry_bush (sangat jarang)
+    flowers: f64,    // bercak bunga (dandelion / rose)
     dry_short: f64,  // short_dry_grass (gurun)
     dry_tall: f64,   // tall_dry_grass (inti bercak di gurun)
     dead_bush: f64,  // dead_bush (jarang, merata)
 }
 
-const NONE: Profile = Profile { grass: 0.0, tall: 0.0, fern: 0.0, large_fern: 0.0, bush: 0.0, berry: 0.0, dry_short: 0.0, dry_tall: 0.0, dead_bush: 0.0 };
+const NONE: Profile = Profile {
+    grass: 0.0, tall: 0.0, fern: 0.0, large_fern: 0.0, bush: 0.0,
+    berry: 0.0, flowers: 0.0, dry_short: 0.0, dry_tall: 0.0, dead_bush: 0.0,
+};
 
-/// Biome ditentukan dari TAG-nya, jadi biome dari mod lain ikut kebagian.
+/// Profil per biome, meniru Minecraft 1.21.5. Biome yang tidak dikenal memakai tag-nya.
 fn profile(b: u32) -> Profile {
+    if PLAINS.id() == b {
+        // Plains: rumput lebat, bercak rumput tinggi, bercak bunga, bush kecil.
+        return Profile { grass: 0.70, tall: 0.45, bush: 0.08, flowers: 0.55, ..NONE };
+    }
+    if BIRCH_FOREST.id() == b {
+        // Birch forest: rumput lebih lebat dari forest, bush, sedikit rumput tinggi.
+        return Profile { grass: 0.50, tall: 0.10, fern: 0.04, bush: 0.12, flowers: 0.10, ..NONE };
+    }
+    if FOREST_BIOME.id() == b {
+        // Forest: rumput sedang, bush, sedikit fern, bunga jarang.
+        return Profile { grass: 0.38, tall: 0.06, fern: 0.08, bush: 0.12, flowers: 0.12, ..NONE };
+    }
+    if TAIGA.id() == b {
+        // Taiga: rumput dan fern bercampur, large fern, rumput tinggi, berry bush jarang.
+        return Profile { grass: 0.30, tall: 0.10, fern: 0.50, large_fern: 0.25, berry: 0.30, ..NONE };
+    }
+    if MOUNTAINS.id() == b {
+        // Windswept hills: rumput tipis, fern campur, bush.
+        return Profile { grass: 0.22, fern: 0.10, bush: 0.06, ..NONE };
+    }
+    // Biome dari mod lain: tebak dari tag.
     if FROZEN.on_biome(b) {
-        return NONE; // salju: tidak ada tumbuhan ini
+        return NONE;
     }
     if DRY.on_biome(b) {
-        // gurun: rumput kering, dead bush
+        // Gurun: rumput kering dan dead bush.
         return Profile { dry_short: 0.30, dry_tall: 0.10, dead_bush: 0.012, ..NONE };
     }
     if FOREST.on_biome(b) && COLD.on_biome(b) {
-        // taiga: fern dominan
-        return Profile { grass: 0.18, fern: 0.55, large_fern: 0.25, bush: 0.05, berry: 0.30, ..NONE };
+        return Profile { grass: 0.30, tall: 0.10, fern: 0.50, large_fern: 0.25, berry: 0.30, ..NONE };
     }
     if FOREST.on_biome(b) {
-        // hutan biasa dan birch: rumput sedang, fern, bush
-        return Profile { grass: 0.35, tall: 0.12, fern: 0.22, large_fern: 0.06, bush: 0.12, berry: 0.10, ..NONE };
+        return Profile { grass: 0.38, tall: 0.06, fern: 0.08, bush: 0.12, flowers: 0.12, ..NONE };
     }
     if MOUNTAIN.on_biome(b) {
-        return Profile { grass: 0.22, fern: 0.10, bush: 0.03, ..NONE };
+        return Profile { grass: 0.22, fern: 0.10, bush: 0.06, ..NONE };
     }
-    // dataran (plains) dan lainnya: padang rumput
-    Profile { grass: 0.70, tall: 0.45, fern: 0.02, bush: 0.05, ..NONE }
+    Profile { grass: 0.60, tall: 0.30, bush: 0.06, flowers: 0.30, ..NONE }
 }
 
 /// Ukuran bercak dalam blok (makin besar = bercak makin lebar) dan batas munculnya.
@@ -214,14 +275,16 @@ const PATCH_GRASS: Patch = Patch { scale: 28.0, from: 0.30, to: 0.65 };
 const PATCH_TALL: Patch = Patch { scale: 16.0, from: 0.50, to: 0.70 };
 const PATCH_FERN: Patch = Patch { scale: 22.0, from: 0.35, to: 0.70 };
 const PATCH_LARGE_FERN: Patch = Patch { scale: 14.0, from: 0.50, to: 0.72 };
-const PATCH_BUSH: Patch = Patch { scale: 45.0, from: 0.55, to: 0.75 };
+const PATCH_BUSH: Patch = Patch { scale: 24.0, from: 0.58, to: 0.78 };
 const PATCH_BERRY: Patch = Patch { scale: 35.0, from: 0.55, to: 0.75 };
+const PATCH_FLOWERS: Patch = Patch { scale: 14.0, from: 0.55, to: 0.75 };
 const PATCH_DRY: Patch = Patch { scale: 24.0, from: 0.35, to: 0.65 };
 const PATCH_DRY_TALL: Patch = Patch { scale: 14.0, from: 0.50, to: 0.70 };
 /// Sedikit rumput di mana-mana supaya padang tidak gundul (bagian dari kepadatan maksimal).
 const GRASS_BASELINE: f64 = 0.12;
-/// Bush dibuat jauh lebih jarang daripada angka profilnya.
-const BUSH_RARITY: f64 = 0.15;
+/// Pengali kelangkaan: bush dan berry dibuat jauh lebih jarang daripada angka profilnya.
+const BUSH_RARITY: f64 = 0.25;
+const BERRY_RARITY: f64 = 0.01;
 
 // ------------------------------------------------------------------ noise ----------------------
 
@@ -261,6 +324,8 @@ enum Plant {
     LargeFern,
     Bush,
     Berry,
+    Dandelion,
+    Rose,
     DryShort,
     DryTall,
     DeadBush,
@@ -269,6 +334,7 @@ enum Plant {
 /// Memilih tumbuhan untuk satu kolom (atau tidak ada). Urutan = prioritas.
 fn choose(seed: u64, wx: i32, wz: i32, prof: Profile) -> Option<Plant> {
     let roll = |salt: i64| unit(hash(seed ^ 0x3C5A_17E5, wx as i64, salt, wz as i64));
+
     // Gurun: rumput kering tinggi (inti bercak) > dead bush > rumput kering pendek.
     if prof.dry_short > 0.0 {
         let dry_s = strength(field(seed, 0xF6, wx, wz, &PATCH_DRY), &PATCH_DRY);
@@ -284,8 +350,8 @@ fn choose(seed: u64, wx: i32, wz: i32, prof: Profile) -> Option<Plant> {
         }
         return None;
     }
-    let grass_f = field(seed, 0xA1, wx, wz, &PATCH_GRASS);
-    let grass_s = strength(grass_f, &PATCH_GRASS);
+
+    let grass_s = strength(field(seed, 0xA1, wx, wz, &PATCH_GRASS), &PATCH_GRASS);
 
     // Rumput tinggi: inti bercak rumput.
     if prof.tall > 0.0 && grass_s > 0.3 {
@@ -302,17 +368,26 @@ fn choose(seed: u64, wx: i32, wz: i32, prof: Profile) -> Option<Plant> {
             return Some(Plant::LargeFern);
         }
     }
-    // Bush: bercak sangat luas dan jarang.
+    // Bush: bercak kecil dan jarang.
     if prof.bush > 0.0 {
         let s = strength(field(seed, 0xE5, wx, wz, &PATCH_BUSH), &PATCH_BUSH);
         if roll(3) < prof.bush * BUSH_RARITY * s {
             return Some(Plant::Bush);
         }
     }
+    // Sweet berry bush: sangat jarang.
     if prof.berry > 0.0 {
         let s = strength(field(seed, 0xE6, wx, wz, &PATCH_BERRY), &PATCH_BERRY);
-        if roll(9) < prof.berry * BUSH_RARITY * s {
+        if roll(9) < prof.berry * BERRY_RARITY * s {
             return Some(Plant::Berry);
+        }
+    }
+    // Bercak bunga: satu jenis per bercak besar (dandelion atau rose), seperti padang bunga Minecraft.
+    if prof.flowers > 0.0 {
+        let s = strength(field(seed, 0x11, wx, wz, &PATCH_FLOWERS), &PATCH_FLOWERS);
+        if roll(10) < prof.flowers * 0.35 * s {
+            let kind = noise2(seed ^ 0x22, wx, wz, 70.0);
+            return Some(if kind < 0.5 { Plant::Dandelion } else { Plant::Rose });
         }
     }
     if prof.fern > 0.0 && roll(4) < prof.fern * fern_s {
@@ -343,13 +418,13 @@ fn plant_world(g: &mut Gen) {
             }
             let y = y as usize;
             let prof = profile(col.biome);
-            if prof.grass + prof.fern + prof.bush + prof.dry_short == 0.0 {
+            if prof.grass + prof.fern + prof.bush + prof.flowers + prof.dry_short == 0.0 {
                 continue;
             }
             let (wx, wz) = (ox + x as i32, oz + z as i32);
             let Some(plant) = choose(seed, wx, wz, prof) else { continue };
             if g.get(x, y, z) != 0 {
-                continue; // sudah ada isinya (bunga, pohon, ...)
+                continue; // sudah ada isinya (bunga bawaan, pohon, ...)
             }
             let below = if y == 0 { g.surface_block(wx, wz) } else { g.get(x, y - 1, z) };
             let dry_plant = matches!(plant, Plant::DryShort | Plant::DryTall | Plant::DeadBush);
@@ -372,6 +447,8 @@ fn plant_world(g: &mut Gen) {
                 Plant::Bush => g.set(x, y, z, BUSH.id()),
                 // Semak beri berbuah penuh (age 3) saat dunia dibuat.
                 Plant::Berry => g.set(x, y, z, SWEET_BERRY_BUSH.with(&[("age", "3")])),
+                Plant::Dandelion => g.set(x, y, z, DANDELION.id()),
+                Plant::Rose => g.set(x, y, z, ROSE.id()),
                 Plant::DryShort => g.set(x, y, z, SHORT_DRY_GRASS.id()),
                 Plant::DryTall => g.set(x, y, z, TALL_DRY_GRASS.id()),
                 Plant::DeadBush => g.set(x, y, z, DEAD_BUSH.id()),

@@ -1,8 +1,9 @@
-# Tekstur MCV 0.3 (semua sementara salinan `tallgrass.png`)
-Folder: assets/textures/block/  (nama file sama dengan Minecraft Java 1.21.5+)
+# Tekstur MCV 0.4 (semua sementara salinan `tallgrass.png`)
+Folder: assets/textures/block/  (format PNG 16x16; nama file sama dengan Minecraft Java 1.21.5+)
 
 | File | Blok | Tint biome |
 |---|---|---|
+| short_grass.png | short_grass (rumput pendek) | rumput |
 | tall_grass_bottom.png / tall_grass_top.png | rumput tinggi (2 blok) | rumput |
 | fern.png | fern | rumput |
 | large_fern_bottom.png / large_fern_top.png | large fern (2 blok) | rumput |
@@ -12,5 +13,14 @@ Folder: assets/textures/block/  (nama file sama dengan Minecraft Java 1.21.5+)
 | short_dry_grass.png | short_dry_grass | rumput |
 | tall_dry_grass.png | tall_dry_grass | rumput |
 
-Rumput pendek (short_grass) adalah blok bawaan Weft (`tallgrass`), diganti lewat resource pack-mu.
-Tekstur dengan tint harus abu-abu/putih (warnanya dari biome). Tanpa tint: pakai warna asli.
+Dandelion dan rose adalah blok bawaan Weft, jadi teksturnya lewat resource pack-mu.
+Tekstur dengan tint harus abu-abu/putih (warna datang dari biome). Tanpa tint: warna asli.
+
+## Mengubah TGA ke PNG sekaligus
+Weft hanya membaca PNG. Di folder `tools/`:
+1. Install Python dan Pillow: `pip install pillow`
+2. Salin semua .tga ke satu folder kerja, lalu jalankan:
+   `python tools/convert_tga.py "C:\folder\tga" --mcv`
+   (`--mcv` mengganti nama Bedrock: double_plant_grass_bottom -> tall_grass_bottom, double_plant_fern_top -> large_fern_top, tallgrass -> short_grass, deadbush -> dead_bush)
+3. Salin hasil .png yang namanya ada di tabel ke `assets/textures/block/`.
+Atau seret folder ke `tools/convert_tga.bat`.
