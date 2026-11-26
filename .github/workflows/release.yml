@@ -1,0 +1,54 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-22.04, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo build --release
+
+      - name: Mod name
+        shell: bash
+        run: echo "MOD=$(grep -m1 '^name' Cargo.toml | cut -d'"' -f2)" >> "$GITHUB_ENV"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: library-${{ matrix.os }}
+          if-no-files-found: error
+          path: |
+            target/release/${{ env.MOD }}.dll
+            target/release/lib${{ env.MOD }}.so
+            target/release/lib${{ env.MOD }}.dylib
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/download-artifact@v8
+        with:
+          path: pack
+          merge-multiple: true
+
+      - name: Pack and publish
+        run: |
+          mod=$(grep -m1 '^name' Cargo.toml | cut -d'"' -f2)
+          if [ -d assets ]; then cp -r assets pack/; fi
+          (cd pack && zip -r "../$mod.zip" .)
+          gh release create "$GITHUB_REF_NAME" "$mod.zip" --verify-tag --generate-notes
