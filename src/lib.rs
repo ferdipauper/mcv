@@ -37,6 +37,7 @@ pub static SWEET_BERRY_BUSH: Block = Block::named("sweet_berry_bush");
 pub static DEAD_BUSH: Block = Block::named("dead_bush");
 pub static SHORT_DRY_GRASS: Block = Block::named("short_dry_grass");
 pub static TALL_DRY_GRASS: Block = Block::named("tall_dry_grass");
+pub static SHORTGRASS1: Block = Block::named("shortgrass1");
 
 /// Rumput pendek milik base (blok satu petak yang dulu disebar acak).
 static SHORT_GRASS: Block = Block::named("base:tall_grass");
@@ -64,6 +65,14 @@ fn init(r: &mut Registry) {
     // Tanah tumbuhan gurun: pasir (cactus_soil) dan tanah berumput biasa.
     r.tag("dry_plant_soil", &["#cactus_soil", "#plant_soil"]);
 
+    // Custom block short_grass1
+    r.block(&SHORTGRASS1)
+        .model("shortgrass1")      // 1. Bentuk visual
+        .non_solid()               // 2. Transparansi & cahaya sekitar
+        .no_collision()            // 3. Fisika tabrakan
+        .hardness(0.0)             // 4. Kekuatan blok
+        .drops("shortgrass1", 1);  // 5. Item yang jatuh saat dihancurkan
+    
     // 2. Blok baru. `plant()` = model silang tanpa tabrakan; `replaceable()` = bisa ditimpa blok.
     r.block(&TALL_GRASS_BOTTOM)
         .sound_group("base:block.grass")
