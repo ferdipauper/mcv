@@ -51,4 +51,4 @@ jobs:
           mod=$(grep -m1 '^name' Cargo.toml | cut -d'"' -f2)
           if [ -d assets ]; then cp -r assets pack/; fi
           (cd pack && zip -r "../$mod.zip" .)
-          $GITHUB_REF_NAME" "$mod.zip" --clobber
+          gh release upload "$GITHUB_REF_NAME" "$mod.zip" --clobber
