@@ -1,0 +1,4 @@
+mod.mcv.name = Minecraft Core Visuals
+block.mcv.short_grass = Short Grass
+block.mcv.tall_grass_bottom = Tall Grass
+block.mcv.tall_grass_top = Tall Grass

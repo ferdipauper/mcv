@@ -1,0 +1,16 @@
+[package]
+name = "mcv"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+# Harus SDK dari build engine yang sama dengan game kamu (26.11.3).
+weft_sdk = { git = "https://github.com/Weft-Rust/Weft", tag = "v26.11.3" }
+
+[workspace]
+
+[profile.release]
+debug = "line-tables-only"
