@@ -1,4 +1,8 @@
 mod.mcv.name = Minecraft Core Visuals
-block.mcv.short_grass = Short Grass
+mod.mcv.description = Nature: tidy grass, ferns and bushes placed in natural patches by biome.
 block.mcv.tall_grass_bottom = Tall Grass
 block.mcv.tall_grass_top = Tall Grass
+block.mcv.fern = Fern
+block.mcv.large_fern_bottom = Large Fern
+block.mcv.large_fern_top = Large Fern
+block.mcv.bush = Bush
