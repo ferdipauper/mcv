@@ -30,6 +30,6 @@ Atau seret folder ke `tools/convert_tga.bat`.
 - `textures/item/short_grass.png` = ikon item creative rumput pendek (boleh sama dengan block).
 - Tint: bush, fern, large_fern, tall/short grass = GRASS. sweet_berry_bush, dead_bush, short/tall_dry_grass = tanpa tint (warna dari texturmu).
 
-## 0.6.0 chest
-- textures/entity/chest.png (64x64, tata letak chest Bedrock), models/chest.geo.json, animations/chest.animation.json: ganti dengan hasil Blockbench-mu.
-- bone: base, lid (pivot di engsel belakang), lock (anak lid). Clip: open, close.
+## Chest
+- `textures/block/chest.png` (64x64, tata letak chest Bedrock) + `models/block/chest.json`.
+- Animasi tutup: belum bisa di 26.11.3; ada di Weft master (`animated_part`).
