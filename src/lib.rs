@@ -9,8 +9,8 @@ pub static SHORT_GRASS: Block = Block::named("short_grass");
 pub static TALL_GRASS_BOTTOM: Block = Block::named("tall_grass_bottom");
 pub static TALL_GRASS_TOP: Block = Block::named("tall_grass_top");
 
-static PLANT_SOIL: Tag = Tag::named("base:plant_soil");
-static FROZEN: Tag = Tag::named("base:frozen");
+static PLANT_SOIL: Tag = Tag::named("plant_soil");
+static FROZEN: Tag = Tag::named("frozen");
 static GRASS_COVER: Component<f32> = Component::named("base:grass");
 static FLOWERS_COVER_ROLL_SALT: u64 = 0xF10;
 static MCV_SALT: u64 = 0x3C5A_17E5;
