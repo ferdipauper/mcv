@@ -65,43 +65,30 @@ fn init(r: &mut Registry) {
     // Tanah tumbuhan gurun: pasir (cactus_soil) dan tanah berumput biasa.
     r.tag("dry_plant_soil", &["#cactus_soil", "#plant_soil"]);
 
-    // 1. Custom block shortgrass1 (muncul di inventory)
+    // 1. Custom block shortgrass1 (model 3D kompleks, tanpa cahaya, muncul di inventory)
     r.block(&SHORTGRASS1)
         .sound_group("base:block.grass")
         .model("shortgrass1")
-        .no_collision()
+        .hitbox([0.0, 0.0, 0.0], [0.0, 0.0, 0.0])
         .replaceable()
         .needs_below("#plant_soil");
 
-    // 2. TALL GRASS (1 item di inventory -> otomatis pasang bottom + top)
+    // 2. Blok tanaman lain (semua muncul di inventory karena .no_item() sudah dihapus)
     r.block(&TALL_GRASS_BOTTOM)
         .sound_group("base:block.grass")
         .texture("tall_grass_bottom")
         .plant()
         .replaceable()
         .needs_below("#plant_soil")
-        .tint(&tints::GRASS)
-        // Saat ditanam pemain, otomatis taruh TALL_GRASS_TOP di atasnya (pos.above())
-        .on_place(|ctx| {
-            let top_pos = ctx.pos.above();
-            if ctx.world.is_air(top_pos) {
-                ctx.world.set_block(top_pos, &TALL_GRASS_TOP);
-                true
-            } else {
-                false // Batalkan penanaman jika blok di atasnya terhalang
-            }
-        });
-
+        .tint(&tints::GRASS);
     r.block(&TALL_GRASS_TOP)
         .sound_group("base:block.grass")
         .texture("tall_grass_top")
         .plant()
         .replaceable()
         .needs_below("mcv:tall_grass_bottom")
-        .tint(&tints::GRASS)
-        .no_item(); // Tetap disembunyikan agar tidak ganda di inventory
+        .tint(&tints::GRASS);
 
-    // 3. FERN (muncul di inventory)
     r.block(&FERN)
         .sound_group("base:block.grass")
         .texture("fern")
@@ -109,35 +96,22 @@ fn init(r: &mut Registry) {
         .replaceable()
         .needs_below("#plant_soil")
         .tint(&tints::GRASS);
-
-    // 4. LARGE FERN (1 item di inventory -> otomatis pasang bottom + top)
     r.block(&LARGE_FERN_BOTTOM)
         .sound_group("base:block.grass")
         .texture("large_fern_bottom")
         .plant()
         .replaceable()
         .needs_below("#plant_soil")
-        .tint(&tints::GRASS)
-        .on_place(|ctx| {
-            let top_pos = ctx.pos.above();
-            if ctx.world.is_air(top_pos) {
-                ctx.world.set_block(top_pos, &LARGE_FERN_TOP);
-                true
-            } else {
-                false
-            }
-        });
-
+        .tint(&tints::GRASS);
     r.block(&LARGE_FERN_TOP)
         .sound_group("base:block.grass")
         .texture("large_fern_top")
         .plant()
         .replaceable()
         .needs_below("mcv:large_fern_bottom")
-        .tint(&tints::GRASS)
-        .no_item();
+        .tint(&tints::GRASS);
 
-    // 5. BUSH, SWEET BERRY BUSH, & TUMBUHAN GURUN (semua muncul di inventory)
+    // Bush: lebih besar dari rumput, berwarna daun (foliage).
     r.block(&BUSH)
         .sound_group("base:block.grass")
         .texture("bush")
@@ -146,6 +120,7 @@ fn init(r: &mut Registry) {
         .needs_below("#plant_soil")
         .tint(&tints::GRASS);
 
+    // Sweet berry bush: 4 tahap (age 0-3), tekstur sweet_berry_bush_stage0..3 seperti Minecraft.
     r.block(&SWEET_BERRY_BUSH)
         .sound_group("base:block.grass")
         .prop("age", 0..=3)
@@ -154,13 +129,13 @@ fn init(r: &mut Registry) {
         .hitbox([1.0, 0.0, 1.0], [15.0, 14.0, 15.0])
         .needs_below("#plant_soil");
 
+    // Tumbuhan gurun / kering (Minecraft 1.21.5): dead_bush, short_dry_grass, tall_dry_grass.
     r.block(&DEAD_BUSH)
         .sound_group("base:block.grass")
         .texture("dead_bush")
         .plant()
         .replaceable()
         .needs_below("#dry_plant_soil");
-
     r.block(&SHORT_DRY_GRASS)
         .sound_group("base:block.grass")
         .texture("short_dry_grass")
@@ -168,7 +143,6 @@ fn init(r: &mut Registry) {
         .replaceable()
         .needs_below("#dry_plant_soil")
         .tint(&tints::GRASS);
-
     r.block(&TALL_DRY_GRASS)
         .sound_group("base:block.grass")
         .texture("tall_dry_grass")
