@@ -1,9 +1,4 @@
 //! Minecraft Core Visuals (MCV) untuk Weft 26.11.3.
-//!
-//! - `short_grass`: rumput pendek (1 blok) yang sangat banyak.
-//! - `tall_grass_bottom` + `tall_grass_top`: rumput tinggi 2 blok seperti Minecraft.
-//! - Dekorasi worldgen yang menambah kepadatan rumput di semua biome berumput.
-//! Tekstur bergaya blocky 16x16, semuanya digambar orisinal.
 
 use weft_sdk::noise::*;
 use weft_sdk::*;
@@ -14,19 +9,17 @@ pub static SHORT_GRASS: Block = Block::named("short_grass");
 pub static TALL_GRASS_BOTTOM: Block = Block::named("tall_grass_bottom");
 pub static TALL_GRASS_TOP: Block = Block::named("tall_grass_top");
 
-// Milik base, dipanggil dengan nama lengkap.
 static PLANT_SOIL: Tag = Tag::named("base:plant_soil");
 static FROZEN: Tag = Tag::named("base:frozen");
 static GRASS_COVER: Component<f32> = Component::named("base:grass");
-static FLOWERS_COVER_ROLL_SALT: u64 = 0xF10; // sama dengan dekorasi base
+static FLOWERS_COVER_ROLL_SALT: u64 = 0xF10;
 static MCV_SALT: u64 = 0x3C5A_17E5;
 
 const SEA: i32 = 63;
 
 fn init(r: &mut Registry) {
-    // Rumput pendek: tanaman silang rendah, diwarnai biome, mudah diinjak/diganti.
     r.block(&SHORT_GRASS)
-        .sound_group("grass")
+        .sound_group("base:block.grass")
         .texture("short_grass")
         .plant()
         .replaceable()
@@ -35,11 +28,10 @@ fn init(r: &mut Registry) {
         .tint(&tints::GRASS)
         .no_item();
     r.loot(&SHORT_GRASS)
-        .pool(Pool::new().when(Cond::chance(0.1)).item("wheat_seeds"));
+        .pool(Pool::new().when(Cond::chance(0.1)).item("base:wheat_seeds"));
 
-    // Rumput tinggi = dua blok bertumpuk. Bawah butuh tanah, atas butuh bagian bawah.
     r.block(&TALL_GRASS_BOTTOM)
-        .sound_group("grass")
+        .sound_group("base:block.grass")
         .texture("tall_grass_bottom")
         .plant()
         .replaceable()
@@ -47,7 +39,7 @@ fn init(r: &mut Registry) {
         .tint(&tints::GRASS)
         .no_item();
     r.block(&TALL_GRASS_TOP)
-        .sound_group("grass")
+        .sound_group("base:block.grass")
         .texture("tall_grass_top")
         .plant()
         .replaceable()
@@ -55,15 +47,13 @@ fn init(r: &mut Registry) {
         .tint(&tints::GRASS)
         .no_item();
     r.loot(&TALL_GRASS_BOTTOM)
-        .pool(Pool::new().when(Cond::chance(0.15)).item("wheat_seeds"));
+        .pool(Pool::new().when(Cond::chance(0.15)).item("base:wheat_seeds"));
     r.loot(&TALL_GRASS_TOP)
-        .pool(Pool::new().when(Cond::chance(0.15)).item("wheat_seeds"));
+        .pool(Pool::new().when(Cond::chance(0.15)).item("base:wheat_seeds"));
 
     r.decoration(more_grass);
 }
 
-/// Mengisi kolom yang dilewati dekorasi base dengan rumput pendek dan rumput tinggi.
-/// Fungsi murni: seed + posisi selalu memberi hasil sama (syarat worldgen Weft).
 fn more_grass(g: &mut Gen) {
     let Some(&cols) = g.columns() else { return };
     let seed = g.seed();
@@ -88,7 +78,6 @@ fn more_grass(g: &mut Gen) {
             let (wx, wz) = (ox + x as i32, oz + z as i32);
             let cover = GRASS_COVER.on_biome(b).unwrap_or(0.05) as f64;
 
-            // Kolom yang sudah dipakai base (rumput/bunga): jangan disentuh.
             let base_roll = unit(hash(seed ^ FLOWERS_COVER_ROLL_SALT, wx as i64, 0, wz as i64));
             if base_roll < cover.max(0.012) {
                 continue;
