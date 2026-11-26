@@ -14,7 +14,7 @@ static OPEN: Mutex<Option<HashMap<u64, u32>>> = Mutex::new(None);
 
 pub fn register(r: &mut Registry) {
     r.block(&CHEST)
-        .sound_group("wood")
+        .sound_group("base:block.wood")
         // Blok hanya hitbox: gambarnya dari model entity. Teksturnya transparan.
         .states(|_, s| s.texture("chest_hitbox").model_box([1.0, 0.0, 1.0], [15.0, 14.0, 15.0]))
         .hardness(2.5)
