@@ -22,6 +22,8 @@
 use weft_sdk::noise::*;
 use weft_sdk::*;
 
+mod chest;
+
 declare_mod!(deps: ["base"], init: init);
 
 // ---------------------------------------------------------------- blok ---------------------------
@@ -75,6 +77,8 @@ fn init(r: &mut Registry) {
     r.edit(&BIRCH_FOREST).set(&GRASS_COVER, 0.0);
     r.edit(&TAIGA).set(&GRASS_COVER, 0.0);
     r.edit(&MOUNTAINS).set(&GRASS_COVER, 0.0);
+
+    chest::register(r);
 
     // Tanah tumbuhan gurun: pasir (cactus_soil) dan tanah berumput biasa.
     r.tag("dry_plant_soil", &["#cactus_soil", "#plant_soil"]);

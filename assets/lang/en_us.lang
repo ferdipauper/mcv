@@ -12,3 +12,5 @@ block.mcv.dead_bush = Dead Bush
 block.mcv.short_dry_grass = Short Dry Grass
 block.mcv.tall_dry_grass = Tall Dry Grass
 block.base.tall_grass = Short Grass
+block.mcv.chest = Chest
+menu.mcv.chest = Chest
