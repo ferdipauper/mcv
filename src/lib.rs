@@ -65,13 +65,14 @@ fn init(r: &mut Registry) {
     // Tanah tumbuhan gurun: pasir (cactus_soil) dan tanah berumput biasa.
     r.tag("dry_plant_soil", &["#cactus_soil", "#plant_soil"]);
 
-    // Custom block short_grass1
+    // Custom block shortgrass1 (model 3D kompleks, muncul di inventory, tanpa cahaya)
     r.block(&SHORTGRASS1)
-        .model("shortgrass1")      // 1. Bentuk visual
-        .non_solid()               // 2. Transparansi & cahaya sekitar
-        .no_collision()            // 3. Fisika tabrakan
-        .hardness(0.0)             // 4. Kekuatan blok
-        .drops("shortgrass1", 1);  // 5. Item yang jatuh saat dihancurkan
+        .sound_group("base:block.grass")
+        .model("shortgrass1")          // Memuat assets/models/block/shortgrass1.json
+        .no_collision()                // Bisa dilewati pemain (menggantikan sifat fisik .plant())
+        .replaceable()                 // Bisa langsung ditimpa saat pemain menaruh blok di atasnya
+        .needs_below("#plant_soil");   // Hanya bisa ditanam/bertahan di atas tanah/rumput
+
     
     // 2. Blok baru. `plant()` = model silang tanpa tabrakan; `replaceable()` = bisa ditimpa blok.
     r.block(&TALL_GRASS_BOTTOM)
