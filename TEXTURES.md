@@ -24,3 +24,8 @@ Weft hanya membaca PNG. Di folder `tools/`:
    (`--mcv` mengganti nama Bedrock: double_plant_grass_bottom -> tall_grass_bottom, double_plant_fern_top -> large_fern_top, tallgrass -> short_grass, deadbush -> dead_bush)
 3. Salin hasil .png yang namanya ada di tabel ke `assets/textures/block/`.
 Atau seret folder ke `tools/convert_tga.bat`.
+
+## 0.5.0
+- `short_grass.png` dipakai untuk blok rumput bawaan Weft (`base:tall_grass`), bukan blok baru. Tint: grass.
+- `textures/item/short_grass.png` = ikon item creative rumput pendek (boleh sama dengan block).
+- Tint: bush, fern, large_fern, tall/short grass = GRASS. sweet_berry_bush, dead_bush, short/tall_dry_grass = tanpa tint (warna dari texturmu).

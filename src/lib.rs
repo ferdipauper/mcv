@@ -26,7 +26,8 @@ declare_mod!(deps: ["base"], init: init);
 
 // ---------------------------------------------------------------- blok ---------------------------
 
-pub static SHORT_GRASS: Block = Block::named("short_grass");
+pub static SHORT_GRASS_ITEM: Item = Item::named("short_grass");
+static BASE_GRASS: Block = Block::named("base:tall_grass");
 pub static TALL_GRASS_BOTTOM: Block = Block::named("tall_grass_bottom");
 pub static TALL_GRASS_TOP: Block = Block::named("tall_grass_top");
 pub static FERN: Block = Block::named("fern");
@@ -80,15 +81,10 @@ fn init(r: &mut Registry) {
 
     // 2. Blok. `plant()` = model silang tanpa tabrakan; `replaceable()` = bisa ditimpa blok.
     //    Tanpa `.no_item()` berarti ada item di creative; `.tab(&NATURAL)` menaruhnya di tab Natural.
-    r.block(&SHORT_GRASS)
-        .sound_group("base:block.grass")
-        .texture("short_grass")
-        .plant()
-        .replaceable()
-        .needs_below("#plant_soil")
-        .tint(&tints::GRASS)
-        .tab(&NATURAL);
-    seeds(r, &SHORT_GRASS, 0.125);
+    // Rumput pendek = blok rumput bawaan Weft (`base:tall_grass`) itu sendiri, bukan blok baru.
+    // Teksturnya diganti ke mcv `block/short_grass.png`; item creative ditambahkan lewat item mcv.
+    r.edit(&BASE_GRASS).texture("short_grass");
+    r.item(&SHORT_GRASS_ITEM).places(&BASE_GRASS).texture("short_grass").tab(&NATURAL);
 
     // Rumput tinggi: item = bagian bawah; saat diletakkan, bagian atas ikut muncul.
     r.block(&TALL_GRASS_BOTTOM)
@@ -146,7 +142,7 @@ fn init(r: &mut Registry) {
         .plant()
         .hitbox([2.0, 0.0, 2.0], [14.0, 13.0, 14.0])
         .needs_below("#plant_soil")
-        .tint(&tints::FOLIAGE)
+        .tint(&tints::GRASS)
         .tab(&NATURAL);
 
     // Sweet berry bush: 4 tahap (age 0-3), tekstur sweet_berry_bush_stage0..3 seperti Minecraft.
@@ -174,8 +170,7 @@ fn init(r: &mut Registry) {
         .plant()
         .replaceable()
         .needs_below("#dry_plant_soil")
-        .tint(&tints::GRASS)
-        .drops_nothing()
+                .drops_nothing()
         .tab(&NATURAL);
     r.block(&TALL_DRY_GRASS)
         .sound_group("base:block.grass")
@@ -184,8 +179,7 @@ fn init(r: &mut Registry) {
         .replaceable()
         .hitbox([2.0, 0.0, 2.0], [14.0, 14.0, 14.0])
         .needs_below("#dry_plant_soil")
-        .tint(&tints::GRASS)
-        .drops_nothing()
+                .drops_nothing()
         .tab(&NATURAL);
 
     // 3. Penanaman.
@@ -417,6 +411,10 @@ fn plant_world(g: &mut Gen) {
                 continue;
             }
             let y = y as usize;
+            // Rumput bawaan base yang sudah tersebar acak dihapus; mod ini yang memutuskan ulang.
+            if BASE_GRASS.is(g.get(x, y, z)) {
+                g.set(x, y, z, 0);
+            }
             let prof = profile(col.biome);
             if prof.grass + prof.fern + prof.bush + prof.flowers + prof.dry_short == 0.0 {
                 continue;
@@ -442,7 +440,7 @@ fn plant_world(g: &mut Gen) {
                     g.set(x, y, z, LARGE_FERN_BOTTOM.id());
                     g.set(x, y + 1, z, LARGE_FERN_TOP.id());
                 }
-                Plant::Tall | Plant::Short => g.set(x, y, z, SHORT_GRASS.id()),
+                Plant::Tall | Plant::Short => g.set(x, y, z, BASE_GRASS.id()),
                 Plant::LargeFern | Plant::Fern => g.set(x, y, z, FERN.id()),
                 Plant::Bush => g.set(x, y, z, BUSH.id()),
                 // Semak beri berbuah penuh (age 3) saat dunia dibuat.
