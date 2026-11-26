@@ -114,7 +114,7 @@ fn init(r: &mut Registry) {
         .plant()
         .hitbox([2.0, 0.0, 2.0], [14.0, 13.0, 14.0])
         .needs_below("#plant_soil")
-        .tint(&tints::FOLIAGE)
+        .tint(&tints::GRASS)
         .no_item();
 
     // Sweet berry bush: 4 tahap (age 0-3), tekstur sweet_berry_bush_stage0..3 seperti Minecraft.
