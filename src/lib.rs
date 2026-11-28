@@ -88,7 +88,7 @@ fn init(r: &mut Registry) {
     // Rumput pendek = blok rumput bawaan Weft (`base:tall_grass`) itu sendiri, bukan blok baru.
     // Teksturnya diganti ke mcv `block/short_grass.png`; item creative ditambahkan lewat item mcv.
     r.edit(&BASE_GRASS).texture("short_grass");
-    r.item(&SHORT_GRASS_ITEM).places(&BASE_GRASS).texture("short_grass").tab(&NATURAL);
+    r.item(&SHORT_GRASS_ITEM).places(&BASE_GRASS).tab(&NATURAL);
 
     // Rumput tinggi: item = bagian bawah; saat diletakkan, bagian atas ikut muncul.
     r.block(&TALL_GRASS_BOTTOM)
@@ -99,6 +99,7 @@ fn init(r: &mut Registry) {
         .needs_below("#plant_soil")
         .tint(&tints::GRASS)
         .on_place(|w, c| place_top(w, c, &TALL_GRASS_TOP))
+        .on_break(|w, c| break_above(w, c, &TALL_GRASS_TOP))
         .tab(&NATURAL);
     r.block(&TALL_GRASS_TOP)
         .sound_group("base:block.grass")
@@ -107,6 +108,7 @@ fn init(r: &mut Registry) {
         .replaceable()
         .needs_below("mcv:tall_grass_bottom")
         .tint(&tints::GRASS)
+        .on_break(|w, c| break_below(w, c, &TALL_GRASS_BOTTOM))
         .no_item();
     seeds(r, &TALL_GRASS_BOTTOM, 0.125);
 
@@ -128,6 +130,7 @@ fn init(r: &mut Registry) {
         .needs_below("#plant_soil")
         .tint(&tints::GRASS)
         .on_place(|w, c| place_top(w, c, &LARGE_FERN_TOP))
+        .on_break(|w, c| break_above(w, c, &LARGE_FERN_TOP))
         .tab(&NATURAL);
     r.block(&LARGE_FERN_TOP)
         .sound_group("base:block.grass")
@@ -136,6 +139,7 @@ fn init(r: &mut Registry) {
         .replaceable()
         .needs_below("mcv:large_fern_bottom")
         .tint(&tints::GRASS)
+        .on_break(|w, c| break_below(w, c, &LARGE_FERN_BOTTOM))
         .no_item();
     seeds(r, &LARGE_FERN_BOTTOM, 0.125);
 
@@ -154,6 +158,9 @@ fn init(r: &mut Registry) {
         .sound_group("base:block.grass")
         .prop("age", 0..=3)
         .states(|p, s| s.texture(&format!("sweet_berry_bush_stage{}", p.get("age"))))
+        // Ikon item (inventory & di tangan): blok ini tidak punya texture tunggal, jadi tanpa
+        // baris ini ikonnya error. File: assets/textures/item/sweet_berries.png
+        .item_texture("sweet_berries")
         .plant()
         .hitbox([1.0, 0.0, 1.0], [15.0, 14.0, 15.0])
         .needs_below("#plant_soil")
@@ -191,6 +198,22 @@ fn init(r: &mut Registry) {
 }
 
 /// Bagian atas tanaman 2 blok ikut diletakkan bila ruangnya kosong.
+/// Bagian atas dihancurkan -> bagian bawah ikut hilang.
+fn break_below(w: &World, c: &BlockChange, bottom: &Block) {
+    let below = [c.pos.x, c.pos.y - 1, c.pos.z];
+    if bottom.is(w.block(below)) {
+        w.set_block(below, 0);
+    }
+}
+
+/// Bagian bawah dihancurkan -> bagian atas ikut hilang (jaga-jaga selain needs_below).
+fn break_above(w: &World, c: &BlockChange, top: &Block) {
+    let above = [c.pos.x, c.pos.y + 1, c.pos.z];
+    if top.is(w.block(above)) {
+        w.set_block(above, 0);
+    }
+}
+
 fn place_top(w: &World, c: &BlockChange, top: &Block) {
     let above = [c.pos.x, c.pos.y + 1, c.pos.z];
     if w.block(above) == 0 {

@@ -33,3 +33,8 @@ Atau seret folder ke `tools/convert_tga.bat`.
 ## Chest
 - `textures/block/chest.png` (64x64, tata letak chest Bedrock) + `models/block/chest.json`.
 - Animasi tutup: belum bisa di 26.11.3; ada di Weft master (`animated_part`).
+
+## 0.6.6
+- Texture ber-.ctm (short_grass, tall_grass_bottom, tall_grass_top) WAJIB punya PNG polos bernama sama di samping .ctm dan folder variasinya (dipakai ikon item). Tiga file itu disalin dari variasi 1; ganti sesuka hati.
+- Ikon sweet_berry_bush = textures/item/sweet_berries.png.
+- Item short_grass digambar sebagai blok (ikut warna tint); textures/item/short_grass.png tidak dipakai lagi.
